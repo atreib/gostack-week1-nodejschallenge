@@ -20,24 +20,108 @@ Após clonar o repositório e realizar um merge com o seu projeto, execute um `y
 
 # E agora?
 
-O primeiro passo é entender o código. Seguindo o conceito de TDD, já temos um bom norte (uma vez que todos os testes já estão feitos). Além disto, a descrição do desafio deixa bem claro o que deve ser feito também. Unindo o útil ao agradável, vamos ao básico:
+O primeiro passo é entender o código. Seguindo o conceito de TDD, já temos um bom norte (uma vez que todos os testes já estão feitos). Além disto, a descrição do desafio deixa bem claro o que deve ser feito. 
+
+Unindo o útil ao agradável, vamos às rotas:
 
 ### [GET] /repositories
 
 O clássico, vamos retornar um JSON com toda a nossa coleção *repositories*.
 
+```jsx
+app.get("/repositories", (request, response) => {
+    return response.json(repositories);
+});
+```
+
 ### [POST] /repositories
 
 Seguindo o padrão RESTful, vamos inserir um novo repositório à nossa coleção. Devemos buscar no *body* do *request* os parâmetros title, url e techs e montar um objeto (nosso novo repositório) inserindo o atributo id (através da biblioteca *uuid*) e adicionar o atributo likes, iniciando em zero. No fim, devemos retornar o repositório inserido.
+
+```jsx
+app.post("/repositories", (request, response) => {
+    const { title, url, techs } = request.body;
+
+    if (!title || !url || !techs)
+        response.status(400).json({message: "invalid parameters"});
+
+    const repo = {
+        title,
+        url,
+        techs,
+        id: uuid(),
+        likes: 0
+    };
+    repositories.push(repo);
+    return response.json(repo);
+});
+```
 
 ### [PUT] /repositories/:id
 
 O verbo PUT representa uma atualização na nossa coleção. Assim como no *POST*, Devemos buscar no *body* do *request* os parâmetros title, url e techs. Além disto, vamos buscar o atributo id no parâmetro *params* do *request*. Se o ID for um UUID válido e existir na nossa coleção, vamos atualizar o respectivo e retornar o repositório atualizado. Caso contrário, vamos retornar um erro 400.
 
+```jsx
+app.put("/repositories/:id", (request, response) => {
+    const { title, url, techs } = request.body;
+    const { id } = request.params;
+    
+    if (!id || !isUuid(id))
+        response.status(400).json({message: "invalid id"});
+
+    const index = repositories.findIndex(o => o.id === id);
+
+    if (index < 0)
+        response.status(400).json({message: "id does not exists"});
+    
+    const originalRepo = repositories[index];
+    const updatedRepo = Object.assign({}, originalRepo, { title, url, techs });
+    repositories[index] = updatedRepo;
+    return response.json(updatedRepo);
+});
+```
+
 ### [DELETE] /repositories/:id
 
 O verbo DELETE representa uma remoção na nossa coleção. Vamos buscar o atributo id no parâmetro *params* do *request*. Se o ID for um UUID válido e existir na nossa coleção, vamos remover o item do nosso repositório e retornar um 204 (sucesso sem conteúdo). Caso contrário, vamos retornar um erro 400.
 
+```jsx
+app.delete("/repositories/:id", (request, response) => {
+    const { id } = request.params;
+
+    if (!id || !isUuid(id))
+        response.status(400).json({message: "invalid id"});
+
+    const index = repositories.findIndex(o => o.id === id);
+
+    if (index < 0)
+        response.status(400).json({message: "id does not exists"});
+
+    repositories.splice(index, 1);
+    return response.status(204).send();
+});
+```
+
 ### [POST] /repositories/:id/like
 
 Aqui, a interpretação do verbo POST é um pouco mais complexa. A natureza desta rota é de aumentar o número de likes (+1) em um repositório da nossa coleção. Logo, vem a mente que estamos tratando de um update. Porém, devemos visualizar o like como uma entidade. Isto é, contextualize com o Facebook, por exemplo. Quando você dá um like em um post, o post recebe +1 like, porém é registrada a informação de que você deu o like no post. Ou seja, temos uma entidade sendo criada (e o +1 na quantidade total de likes é uma consequência desta entidade sendo criada). No exemplo do desafio, estamos trabalhando apenas com o +1 (a fim de não problematizar o desafio). Voltando, nesta rota vamos buscar o atributo id no parâmetro *params* do *request*. Se o ID for um UUID válido e existir na nossa coleção, vamos aumentar o número de likes do item do nosso repositório por +1 e retornar um 200, com o repositório cujo atualizamos o número de likes. Caso contrário, vamos retornar um erro 400.
+
+```jsx
+app.post("/repositories/:id/like", (request, response) => {
+    const { title, url, techs } = request.body;
+    const { id } = request.params;
+    
+    if (!id || !isUuid(id))
+        response.status(400).json({message: "invalid id"});
+
+    const index = repositories.findIndex(o => o.id === id);
+
+    if (index < 0)
+        response.status(400).json({message: "id does not exists"});
+    
+    const repo = repositories[index];
+    repo.likes++;
+    repositories[index] = repo;
+    return response.json(repo);
+});
+```
