@@ -71,7 +71,6 @@ app.delete("/repositories/:id", (request, response) => {
 });
 
 app.post("/repositories/:id/like", (request, response) => {
-    const { title, url, techs } = request.body;
     const { id } = request.params;
     
     if (!id || !isUuid(id))
